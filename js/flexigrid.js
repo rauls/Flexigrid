@@ -222,6 +222,8 @@
 					this.rePosDrag();
 					this.fixHeight();
 					this.colresize = false;
+					var name = p.colModel[n].name;		// Store the widths in the cookies
+					$.cookie('flexiwidths/'+name, nw);
 				} else if (this.vresize) {
 					this.vresize = false;
 				} else if (this.colCopy) {
@@ -343,8 +345,11 @@
 				if (p.dataType == 'json') {
 					$.each(data.rows, function (i, row) {
 						var tr = document.createElement('tr');
-						if (i % 2 && p.striped) {
-							tr.className = 'erow';
+						if (row.name) tr.name = row.name;					// if row has a name reference, store it
+						if (row.color) {							// if we have custom color, use it
+							$(tr).css('background',row.color);
+						} else {
+							if (i % 2 && p.striped) tr.className = 'erow';
 						}
 						if (row[p.idProperty]) {
 							tr.id = 'row' + row[p.idProperty];
