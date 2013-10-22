@@ -8,6 +8,9 @@
  */
 (function ($) {
 	$.addFlex = function (t, p) {
+	        if( $.browser == undefined ) {
+	            $.browser = {};
+	        }
 		if (t.grid) return false; //return if already exist
 		p = $.extend({ //apply default properties
 			height: 200, //default height
@@ -27,7 +30,7 @@
 			total: 1, //total pages
 			useRp: true, //use the results per page select box
 			rp: 15, //results per page
-			rpOptions: [10, 15, 20, 30, 50], //allowed per-page values 
+			rpOptions: [10, 12, 15, 20, 30, 40, 50, 100, 250], //allowed per-page values 
 			title: false,
 			idProperty: 'id',
 			pagestat: 'Displaying {from} to {to} of {total} items',
@@ -475,6 +478,9 @@
 						p.sortorder = 'asc';
 					}
 				}
+				// Save Sort order cookie
+				$.cookie('flexisort/'+p.id, $(th).attr('abbr') + "," + p.sortorder);
+
 				$(th).addClass('sorted').siblings().removeClass('sorted');
 				$('.sdesc', this.hDiv).removeClass('sdesc');
 				$('.sasc', this.hDiv).removeClass('sasc');
@@ -531,6 +537,8 @@
 				if (p.page > p.pages) {
 					p.page = p.pages;
 				}
+				g.cookiepath = 'flexisort/' + p.id;
+				
 				var param = [{
 					name: 'page',
 					value: p.newp
@@ -685,6 +693,10 @@
 							$(this).siblings().removeClass('trSelected');
 							$(this).toggleClass('trSelected');
 						}
+						if (p.rowPress_callback)
+						{
+							p.rowPress_callback(this,g.gDiv);
+						}										
 					}).mousedown(function (e) {
 						if (e.shiftKey) {
 							$(this).toggleClass('trSelected');
@@ -936,6 +948,7 @@
 			}).hover(function () {
 				if (!g.colresize && !$(this).hasClass('thMove') && !g.colCopy) {
 					$(this).addClass('thOver');
+					$(this).context.thOver = true;
 				}
 				if ($(this).attr('abbr') != p.sortname && !g.colCopy && !g.colresize && $(this).attr('abbr')) {
 					$('div', this).addClass('s' + p.sortorder);
@@ -982,6 +995,7 @@
 				}
 			}, function () {
 				$(this).removeClass('thOver');
+				$(this).context.thOver = false;
 				if ($(this).attr('abbr') != p.sortname) {
 					$('div', this).removeClass('s' + p.sortorder);
 				} else if ($(this).attr('abbr') == p.sortname) {
@@ -1039,7 +1053,7 @@
 				}).mousedown(function (e) {
 					g.dragStart('colresize', e, this);
 				});
-				if ($.browser.msie && $.browser.version < 7.0) {
+				if ($.browser && $.browser.msie && $.browser.version < 7.0) {
 					g.fixHeight($(g.gDiv).height());
 					$(cgDiv).hover(function () {
 						g.fixHeight();
@@ -1078,7 +1092,7 @@
 		// add pager
 		if (p.usepager) {
 			g.pDiv.className = 'pDiv';
-			g.pDiv.innerHTML = '<div class="pDiv2"></div>';
+			g.pDiv.innerHTML = '<div class="pDiv2" style="height: 24px"></div>';
 			$(g.bDiv).after(g.pDiv);
 			var html = ' <div class="pGroup"> <div class="pFirst pButton"><span></span></div><div class="pPrev pButton"><span></span></div> </div> <div class="btnseparator"></div> <div class="pGroup"><span class="pcontrol">' + p.pagetext + ' <input type="text" size="4" value="1" /> ' + p.outof + ' <span> 1 </span></span></div> <div class="btnseparator"></div> <div class="pGroup"> <div class="pNext pButton"><span></span></div><div class="pLast pButton"><span></span></div> </div> <div class="btnseparator"></div> <div class="pGroup"> <div class="pReload pButton"><span></span></div> </div> <div class="btnseparator"></div> <div class="pGroup"><span class="pPageStat"></span></div>';
 			$('div', g.pDiv).html(html);
@@ -1108,6 +1122,8 @@
 			if (p.useRp) {
 				var opt = '',
 					sel = '';
+			        var newrp = g.cookie('flexi.rp/'+p.id);
+			        if( newrp ) { p.rp = newrp; }
 				for (var nx = 0; nx < p.rpOptions.length; nx++) {
 					if (p.rp == p.rpOptions[nx]) sel = 'selected="selected"';
 					else sel = '';
@@ -1115,6 +1131,7 @@
 				}
 				$('.pDiv2', g.pDiv).prepend("<div class='pGroup'><select name='rp'>" + opt + "</select></div> <div class='btnseparator'></div>");
 				$('select', g.pDiv).change(function () {
+					$.cookie('flexi.rp/'+p.id, this.value, { expires: 365*3 } );
 					if (p.onRpChange) {
 						p.onRpChange(+this.value);
 					} else {
@@ -1149,7 +1166,7 @@
 					p.qtype = sitems[0].name;
 				}
 				$(g.sDiv).append("<div class='sDiv2'>" + p.findtext + 
-						" <input type='text' value='" + p.query +"' size='30' name='q' class='qsbox' /> "+
+						" <input data-role='none' type='text' value='" + p.query +"' size='30' name='q' class='qsbox' /> "+
 						" <select name='qtype'>" + sopt + "</select></div>");
 				//Split into separate selectors because of bug in jQuery 1.3.2
 				$('input[name=q]', g.sDiv).keydown(function (e) {
@@ -1220,7 +1237,7 @@
 				if (kcol.style.display == 'none') {
 					chk = '';
 				}
-				$('tbody', g.nDiv).append('<tr><td class="ndcol1"><input type="checkbox" ' + chk + ' class="togCol" value="' + cn + '" /></td><td class="ndcol2">' + this.innerHTML + '</td></tr>');
+				$('tbody', g.nDiv).append('<tr><td class="ndcol1"><input data-role="none" type="checkbox" ' + chk + ' class="togCol" value="' + cn + '" /></td><td class="ndcol2">' + this.innerHTML + '</td></tr>');
 				cn++;
 			});
 			if ($.browser.msie && $.browser.version < 7.0) $('tr', g.nDiv).hover(function () {
